@@ -61,7 +61,7 @@ All secrets live in `.env.local`, which is gitignored. The browser only receives
 | `SCREENSCAPE_EMBED_TEMPLATE` | Movies | Movie embed URL pattern. |
 | `SCREENSCAPE_TV_EMBED_TEMPLATE` | Series | TV embed URL pattern; supports `{s}` and `{e}`. |
 | `SITE_NAME` | No | Display name. |
-| `PORT` / `HOST` | No | Server bind settings. Defaults: `3000` / `0.0.0.0`. |
+| `port` | No | Port to listen on (defaults to `3000`). Server always binds to `0.0.0.0`. |
 | `TMDB_BASE_URL` | No | Override the TMDB API base URL. Defaults to `https://api.themoviedb.org/3/`. |
 
 \* Or use a v4 read token instead.
