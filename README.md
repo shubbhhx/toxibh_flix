@@ -28,10 +28,27 @@ Open **http://localhost:3000**. No `npm install` is needed — the server uses o
 
 After changing `.env.local`, restart the server.
 
+## Deployment
+
+### Render
+
+Deploy with `npm start`. Render injects `PORT`, which the server now honors. Set `TMDB_API_KEY` (or `TMDB_READ_ACCESS_TOKEN`) in the Render dashboard; Screenscape embed templates are optional because safe defaults are bundled in `js/screenscape-templates.js`.
+
+### GitHub Pages
+
+`server.mjs` does not run on GitHub Pages, so the committed `config.js` provides the public Screenscape defaults. To load movie/TV data through the Render proxy, set `apiBaseUrl` in `config.js` to your Render service URL:
+
+```js
+apiBaseUrl: 'https://your-app.onrender.com',
+```
+
+Leave `apiBaseUrl` empty when the app is served by Render itself.
+
 ## Project layout
 
 ```text
 server.mjs              Static server + TMDB proxy + public config injection
+config.js               Static config fallback for GitHub Pages
 index.html              Home page
 search.html             Search page
 detail.html             Title details
@@ -43,6 +60,7 @@ js/api.js               TMDB request helpers and image URLs
 js/auth.js              Local account handling
 js/storage.js           Per-user My List and recent titles
 js/screenscape.js       Embed URL resolver
+js/screenscape-templates.js  Bundled public embed defaults
 js/screenscape-map.js   Optional per-title embed overrides
 js/components.js        Shared header, cards, rows, toasts, modal
 js/pages/               Page-specific logic
@@ -58,10 +76,12 @@ All secrets live in `.env.local`, which is gitignored. The browser only receives
 | --- | --- | --- |
 | `TMDB_API_KEY` | Yes* | TMDB v3 API key from [TMDB settings](https://www.themoviedb.org/settings/api). |
 | `TMDB_READ_ACCESS_TOKEN` | No | Alternative v4 read token. Takes precedence over `TMDB_API_KEY`. |
-| `SCREENSCAPE_EMBED_TEMPLATE` | Movies | Movie embed URL pattern. |
-| `SCREENSCAPE_TV_EMBED_TEMPLATE` | Series | TV embed URL pattern; supports `{s}` and `{e}`. |
+| `SCREENSCAPE_EMBED_TEMPLATE` | No | Movie embed URL pattern. Defaults to the public Screenscape URL. |
+| `SCREENSCAPE_TV_EMBED_TEMPLATE` | No | TV embed URL pattern; supports `{s}` and `{e}`. Defaults to the public Screenscape URL. |
 | `SITE_NAME` | No | Display name. |
-| `port` | No | Port to listen on (defaults to `3000`). Server always binds to `0.0.0.0`. |
+| `PORT` / `port` | No | Port to listen on. `PORT` (injected by Render) takes precedence; defaults to `3000`. |
+| `API_BASE_URL` | No | Render service URL to use when the front end is hosted on GitHub Pages. |
+| `CORS_ORIGIN` | No | Allowed origin for cross-origin TMDB proxy calls. Defaults to `*`. |
 | `TMDB_BASE_URL` | No | Override the TMDB API base URL. Defaults to `https://api.themoviedb.org/3/`. |
 
 \* Or use a v4 read token instead.
@@ -115,7 +135,7 @@ Login, registration, My List, and watch history are stored in `localStorage` in 
 
 - **"TMDB setup required" banner** — add a real key to `.env.local` and restart the server.
 - **Rows are empty or return 401** — the TMDB key is invalid or lacks read access.
-- **"Screenscape embed not configured"** — check that the movie and TV templates are set in `.env.local`.
+- **"Screenscape embed not configured"** — check `config.js` on GitHub Pages or the `SCREENSCAPE_*` variables in Render/.env.local. The bundled defaults should prevent this message.
 - **Player area is blank** — open the embed URL directly in a browser tab to confirm the provider allows embedding, then check the season/episode values.
 
 ## Attribution

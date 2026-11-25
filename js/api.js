@@ -2,7 +2,10 @@ const appConfig = window.APP_CONFIG || {};
 
 export const config = {
   siteName: appConfig.siteName || 'Toxibh Flix',
-  tmdbConfigured: Boolean(appConfig.tmdbConfigured),
+  // When the front end is hosted on GitHub Pages, point this at the Render
+  // service so /api/tmdb/* requests still reach the server-side proxy.
+  apiBaseUrl: appConfig.apiBaseUrl || '',
+  tmdbConfigured: Boolean(appConfig.tmdbConfigured || appConfig.apiBaseUrl),
   screenscape: appConfig.screenscape || { template: '', configured: false },
 };
 
@@ -30,7 +33,15 @@ export function imageUrl(filePath, size = 'w500', ratio = 'poster') {
 }
 
 async function request(path, params = {}) {
-  const url = new URL(`/api/tmdb/${path.replace(/^\/+/, '')}`, window.location.origin);
+  let origin = window.location.origin;
+  if (config.apiBaseUrl) {
+    try {
+      origin = new URL(config.apiBaseUrl).origin;
+    } catch {
+      throw new Error('Invalid apiBaseUrl in config.js.');
+    }
+  }
+  const url = new URL(`/api/tmdb/${path.replace(/^\/+/, '')}`, origin);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') {
       url.searchParams.set(key, String(value));
@@ -41,7 +52,11 @@ async function request(path, params = {}) {
   try {
     response = await fetch(url, { headers: { Accept: 'application/json' } });
   } catch {
-    throw new Error('Could not connect to the local server. Is `npm start` running?');
+    throw new Error(
+      config.apiBaseUrl
+        ? 'Could not reach the TMDB proxy. Check the apiBaseUrl in config.js.'
+        : 'Could not connect to the server. Is `npm start` running, or is apiBaseUrl set in config.js?'
+    );
   }
 
   let data;

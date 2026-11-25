@@ -1,10 +1,13 @@
 import { embedOverrides } from './screenscape-map.js';
 import { config } from './api.js';
+import {
+  DEFAULT_MOVIE_EMBED_TEMPLATE,
+  DEFAULT_TV_EMBED_TEMPLATE,
+} from './screenscape-templates.js';
 
-export const EXAMPLE_TEMPLATE =
-  'https://web.screenscape.fun/embed?tmdb={tmdbId}&type=movie&lan=eng';
-export const EXAMPLE_TV_TEMPLATE =
-  'https://web.screenscape.fun/embed?tmdb={tmdbId}&type=tv&s={s}&e={e}&lan=eng';
+// Kept as aliases for existing imports in watch.js.
+export const EXAMPLE_TEMPLATE = DEFAULT_MOVIE_EMBED_TEMPLATE;
+export const EXAMPLE_TV_TEMPLATE = DEFAULT_TV_EMBED_TEMPLATE;
 
 function applyTokens(value, item, type, options = {}) {
   const providerId = item.screenscape_id || item.provider_id || item.id;
@@ -28,26 +31,31 @@ function safeUrl(value) {
   }
 }
 
-export function isConfigured() {
+function templates() {
   const settings = config.screenscape || {};
-  return Boolean(
-    settings.template || settings.tvTemplate || Object.keys(embedOverrides).length
-  );
+
+  // Values from /config.js (Render / local server) override the built-in
+  // defaults. On GitHub Pages /config.js is the committed static fallback, so
+  // this still resolves to the same public Screenscape URLs.
+  const movieTemplate = settings.template || DEFAULT_MOVIE_EMBED_TEMPLATE;
+  const genericTemplate = settings.template?.includes('{type}') ? settings.template : '';
+  const tvTemplate =
+    settings.tvTemplate || genericTemplate || DEFAULT_TV_EMBED_TEMPLATE;
+
+  return { movieTemplate, tvTemplate };
+}
+
+export function isConfigured() {
+  // The bundled defaults always produce a valid Screenscape URL, so the player
+  // no longer depends on deployment-specific environment variables.
+  return true;
 }
 
 export function resolveEmbedUrl(item, options = {}) {
   const type = item.type || item.media_type || 'movie';
-  const settings = config.screenscape || {};
+  const { movieTemplate, tvTemplate } = templates();
   const override = embedOverrides[`${type}:${item.id}`] || embedOverrides[String(item.id)];
-
-  let template;
-  if (type === 'tv') {
-    template = settings.tvTemplate || '';
-    // Backwards compatibility: a generic template with a {type} token can serve both.
-    if (!template && settings.template?.includes('{type}')) template = settings.template;
-  } else {
-    template = settings.template || '';
-  }
+  const template = type === 'tv' ? tvTemplate : movieTemplate;
 
   if (!override && !template) return null;
   return safeUrl(applyTokens(override || template, item, type, options));

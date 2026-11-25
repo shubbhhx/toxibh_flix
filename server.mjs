@@ -2,10 +2,16 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  DEFAULT_MOVIE_EMBED_TEMPLATE,
+  DEFAULT_TV_EMBED_TEMPLATE,
+} from './js/screenscape-templates.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.port || 3000);
+// Render injects PORT; keep lowercase `port` for older local setups.
+const PORT = Number(process.env.PORT || process.env.port || 3000);
 const HOST = '0.0.0.0';
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -63,6 +69,9 @@ function send(res, status, body, type = 'text/plain; charset=utf-8', extra = {})
     'Content-Type': type,
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
+    'Access-Control-Allow-Origin': CORS_ORIGIN,
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
     ...extra,
   });
   res.end(body);
@@ -70,14 +79,8 @@ function send(res, status, body, type = 'text/plain; charset=utf-8', extra = {})
 
 function isPlaceholder(value) {
   const text = String(value || '').trim().toLowerCase();
-  return (
-    !text ||
-    text.includes('your_') ||
-    text.includes('your-') ||
-    text.includes('example') ||
-    text.includes('placeholder') ||
-    text.includes('here')
-  );
+  if (!text) return true;
+  return /^(your[_-]|example[./_-]|placeholder|replace[_-]?me|todo|xxx)/.test(text);
 }
 
 function credentials() {
@@ -92,13 +95,19 @@ function credentials() {
 
 function publicConfig() {
   const { apiKey, readToken } = credentials();
-  const template = process.env.SCREENSCAPE_EMBED_TEMPLATE || '';
-  const tvTemplate = process.env.SCREENSCAPE_TV_EMBED_TEMPLATE || '';
-  const movieTemplate = isPlaceholder(template) ? '' : template;
-  const seriesTemplate = isPlaceholder(tvTemplate) ? '' : tvTemplate;
+  const rawTemplate = process.env.SCREENSCAPE_EMBED_TEMPLATE || '';
+  const rawTvTemplate = process.env.SCREENSCAPE_TV_EMBED_TEMPLATE || '';
+  const movieTemplate = isPlaceholder(rawTemplate) ? DEFAULT_MOVIE_EMBED_TEMPLATE : rawTemplate;
+  // A generic template containing {type} can serve both movies and TV shows.
+  const genericTemplate = movieTemplate.includes('{type}') ? movieTemplate : '';
+  const seriesTemplate = isPlaceholder(rawTvTemplate)
+    ? genericTemplate || DEFAULT_TV_EMBED_TEMPLATE
+    : rawTvTemplate;
+  const apiBaseUrl = process.env.API_BASE_URL || '';
   return {
     siteName: process.env.SITE_NAME || 'Toxibh Flix',
-    tmdbConfigured: Boolean(apiKey || readToken),
+    apiBaseUrl,
+    tmdbConfigured: Boolean(apiKey || readToken || apiBaseUrl),
     screenscape: {
       template: movieTemplate,
       tvTemplate: seriesTemplate,
@@ -186,6 +195,9 @@ async function proxyTmdb(req, res, url) {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'public, max-age=300',
       'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     });
     res.end(body);
   } catch (error) {
@@ -242,6 +254,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname.startsWith('/api/tmdb/')) {
+    if (req.method === 'OPTIONS') return send(res, 204);
     return proxyTmdb(req, res, url);
   }
 

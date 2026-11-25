@@ -28,9 +28,12 @@ function setupPanel(item) {
     type === 'tv'
       ? `<code>SCREENSCAPE_TV_EMBED_TEMPLATE=${escapeHtml(EXAMPLE_TV_TEMPLATE)}</code>`
       : `<code>SCREENSCAPE_EMBED_TEMPLATE=${escapeHtml(EXAMPLE_TEMPLATE)}</code>`;
+  const where = window.location.hostname.endsWith('.github.io')
+    ? 'your committed <code>config.js</code>'
+    : '<code>.env.local</code> or your Render environment variables, then restart/redeploy';
   return renderMessage(
     'Screenscape embed not configured',
-    `Add ${example} to <code>.env.local</code> and restart the server. You can also add a per-title URL in <code>js/screenscape-map.js</code>. ${
+    `Add ${example} to ${where}. You can also add a per-title URL in <code>js/screenscape-map.js</code>. ${
       item ? `Current title: <strong>${escapeHtml(item.title)}</strong>.` : ''
     }`
   );

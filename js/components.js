@@ -73,7 +73,7 @@ export function renderChrome() {
   if (banner && !config.tmdbConfigured) {
     banner.innerHTML = `
       <div class="setup-banner">
-        <strong>Setup needed:</strong> add <code>TMDB_API_KEY</code> to <code>.env.local</code>, then restart the server.
+        <strong>Setup needed:</strong> add <code>TMDB_API_KEY</code> to <code>.env.local</code> (or your Render environment variables), or set <code>apiBaseUrl</code> in <code>config.js</code> for GitHub Pages.
       </div>`;
   }
 
